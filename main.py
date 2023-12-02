@@ -1,43 +1,49 @@
 #scheduling in shell
 
 from selenium import webdriver
-from selenium.webdriver.common.by import By 
-from selenium.webdriver.common.actions import Actions
+from selenium.webdriver.common.by import By
 import argparse
+from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from configparser import ConfigParser
+import time
 
-url = 'https://fitness-academy.com.pl/kluby-fitness/wroclaw-maslicka/grafik-zajec'
-#xpath do rezerwacji
+url = 'https://fitness-academy.com.pl/kluby-fitness/wroclaw-maslicka/grafik-zajec#logowanie'
+account = "Natalka"
 
-parser = argparse.ArgumentParser()
-args = parser.parse_args()
+# parser = argparse.ArgumentParser()
+# parser.add_argument('xpath')
+# parser.add_argument('account')
+# args = parser.parse_args()
 
-class BookClasses(xpath, url):
-    def __init__(self, xpath):
-        self.xpath = xpath
+class BookClasses:
+    def __init__(self, url):
+        self.url = url
 
-    def reserve(self): -> None:
-    '''
+    def reserve(self, account) -> None:
+        '''
 
         Flow:
         1. Connect to website
-        2. Select classes by Xpath
-        3. Log in
-            3.1 Access config file
-            3.2 Input data into textboxes
+        2. Log in
+            2.1 Access config file
+            2.2 Input data into textboxes
+        3. Select classes by Xpath
 
-    '''
-        driver = webdriver.Chrome()
+        '''
+
+        driver = webdriver.Firefox()
         driver.get(url)
 
-        reserve = driver.find_element(By.XPATH, self.xpath)  # chyba, że tego xpath da sie automatycznie generowac
-        reserve.click()
+        # tu musimy przerzucić się na komunikat/strone do logowania, który występuje (co to wgl jest)
 
-        # tu musimy przerzucić się na komunikat/strone do logowania, który występuje
+        config = ConfigParser()
+        config.read("config.ini")
+        login = config[account]["username"]
+        password = config[account]["password"]
 
-
-
-        # tu pobieramy z pliku config haslo i login
-
+        popup_button = driver.find_element(By.ID, "didomi-notice-agree-button")
+        popup_button.click()
 
         text_login = driver.find_element(By.ID, "member_login_form_email")
         text_login.clear()
@@ -49,9 +55,32 @@ class BookClasses(xpath, url):
 
         driver.find_element(By.ID, "member_login_form_submit").click()
 
+        # wait = WebDriverWait(driver, 15)
+        driver.implicitly_wait(10)
+
+        print(driver.current_url)
+
+        # TO NIE DZIAŁA BO JEST TO PSEUDO ELEMENT POTRZEBA JS
+        pick_classes = driver.find_element(By.ID, "id") # wait.until(EC.element_to_be_clickable((By.XPATH, self.xpath)))
+        pick_classes.click()
+
+        print(driver.current_url)
+        driver.implicitly_wait(10)
+
+        for handle in driver.window_handles:
+            driver.switch_to.window(handle)
+
+        register_button = driver.find_element(By.ID, "schedule_register_form_submit") #wait.until(EC.element_to_be_clickable((By.ID, "schedule_register_form_submit")))
+        register_button.click()
+
+        print(driver.current_url)
+
+        time.sleep(10)
+
         driver.close()
 
-if __name__ == __main__:
-    classes = BookClasses()
-    classes.reserve()
+if __name__ == "__main__":
+    classes = BookClasses(url) # tu później zmień na args.xpath
+    classes.reserve(account) # tu zmien na args.account
+
 
