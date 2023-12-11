@@ -1,7 +1,9 @@
 #scheduling in shell
 
 from selenium import webdriver
+
 from selenium.webdriver.common.by import By
+from selenium.webdriver.remote.webelement import WebElement
 # from selenium.webdriver.common.keys import Keys
 import argparse
 from selenium.webdriver.support.wait import WebDriverWait
@@ -20,6 +22,24 @@ class BookClasses:
     def __init__(self, url):
         self.url = url
 
+    '''
+        Returns index of day of week in table (0-6)
+    '''
+    def get_day_index(self, driver: webdriver.Chrome, day_of_week) -> int:
+        # Array.from(document.querySelectorAll("table.schedule > thead th")).map(e => e.innerHTML.includes("Sobota")).findIndex(e => e == true)
+        x = driver.find_elements(By.CSS_SELECTOR, "table.schedule > thead th")
+
+        for element in x:
+            if day_of_week in element.get_attribute('innerHTML'):
+                return x.index(element) - 1
+
+    def get_register_button(self, driver: webdriver.Chrome, day_of_week, hour, class_name) -> WebElement:
+        elements = driver.find_elements(By.CSS_SELECTOR, "table.schedule > tbody tr")
+
+        for element in elements:
+            if hour in element.get_attribute('innerHTML') and class_name in element.get_attribute('innerHTML'):
+                return element.find_elements(By.CSS_SELECTOR, 'td')[day_of_week].find_element(By.CSS_SELECTOR, 'a.register')
+
     def reserve(self, account) -> None:
         '''
 
@@ -36,24 +56,35 @@ class BookClasses:
 
         '''
 
-        driver = webdriver.Firefox()
+        driver = webdriver.Chrome()
         driver.get(self.url)
 
         config = ConfigParser()
         config.read("config.ini")
         login = config[account]["username"]
         password = config[account]["password"]
-        xpath = config[account]["xpath"]
+        day_of_week = config[account]["dayOfWeek"]
+        hour = config[account]["hour"]
+        class_name = config[account]["name"]
 
         driver.implicitly_wait(30)
 
+        # Accept cookies
         popup_button = driver.find_element(By.ID, "didomi-notice-agree-button")
         popup_button.click()
 
-        pick_classes = driver.find_element(By.XPATH, xpath)
-        href = pick_classes.get_attribute("href")
+        day_index = self.get_day_index(driver, day_of_week)
 
-        driver.get(href)
+        register_button = self.get_register_button(driver, day_index, hour, class_name)
+
+        # Array.from(document.querySelectorAll("table.schedule > tbody tr")).filter(e => e.innerHTML.includes("10:00"))[0].querySelector("td:nth-child(3)")
+
+        # pick_classes = driver.find_element(By.XPATH, xpath)
+        # href = pick_classes.get_attribute("href")
+        print(register_button.get_attribute("href"))
+        pass
+
+        driver.get(register_button.get_attribute("href"))
 
         register_button = driver.find_element(By.ID, "schedule_register_form_submit")
         register_button.click()
@@ -83,5 +114,3 @@ class BookClasses:
 if __name__ == "__main__":
     classes = BookClasses(url)
     classes.reserve(args.account)
-
-
